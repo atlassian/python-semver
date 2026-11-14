@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 
 import semver
@@ -285,8 +287,10 @@ def test_should_compare_version_tuples(t):
 
     assert v0 < t
     assert v0 <= t
-    assert v0 != t
-    assert not v0 == t
+    with pytest.warns(DeprecationWarning):
+        assert v0 != t
+    with pytest.warns(DeprecationWarning):
+        assert not v0 == t
     assert v1 > t
     assert v1 >= t
     # Symmetric
@@ -294,8 +298,43 @@ def test_should_compare_version_tuples(t):
     assert t >= v0
     assert t < v1
     assert t <= v1
-    assert t != v0
-    assert not t == v0
+    with pytest.warns(DeprecationWarning):
+        assert t != v0
+    with pytest.warns(DeprecationWarning):
+        assert not t == v0
+
+
+@pytest.mark.parametrize("other", ["1.0.0", (1, 0, 0)])
+def test_should_warn_when_testing_equality_with_strings_or_tuples(other):
+    version = Version.parse("1.0.0")
+
+    with pytest.warns(DeprecationWarning, match="Equality comparisons"):
+        assert version == other
+    with pytest.warns(DeprecationWarning, match="Equality comparisons"):
+        assert not (version != other)
+
+    assert isinstance(hash(version), int)
+
+
+def test_should_filter_only_cross_type_equality_deprecation_warnings():
+    version = Version.parse("1.0.0")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Equality comparisons between Version and strings, tuples or lists.*",
+            category=DeprecationWarning,
+        )
+
+        for other in ("1.0.0", b"1.0.0", (1, 0, 0), [1, 0, 0]):
+            assert version == other
+            assert (version != other) is False
+
+        warnings.warn("unrelated deprecation", DeprecationWarning)
+
+    assert len(caught) == 1
+    assert str(caught[0].message) == "unrelated deprecation"
 
 
 @pytest.mark.parametrize(
@@ -343,8 +382,10 @@ def test_should_compare_version_string(s):
 
     assert v0 < s
     assert v0 <= s
-    assert v0 != s
-    assert not v0 == s
+    with pytest.warns(DeprecationWarning):
+        assert v0 != s
+    with pytest.warns(DeprecationWarning):
+        assert not v0 == s
     assert v1 > s
     assert v1 >= s
     # Symmetric
@@ -352,8 +393,10 @@ def test_should_compare_version_string(s):
     assert s >= v0
     assert s < v1
     assert s <= v1
-    assert s != v0
-    assert not s == v0
+    with pytest.warns(DeprecationWarning):
+        assert s != v0
+    with pytest.warns(DeprecationWarning):
+        assert not s == v0
 
 
 @pytest.mark.parametrize("s", ("1", "1.0", "1.0.x"))
